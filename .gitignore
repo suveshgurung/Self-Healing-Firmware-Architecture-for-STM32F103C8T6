@@ -1,0 +1,25 @@
+.metadata/
+
+# Compiled object files and libraries
+*.o
+*.su
+*.d
+
+# Build output directories (Default configurations)
+/Debug/
+/Release/
+
+# Executable binaries and images
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+
+# STM32CubeIDE / Eclipse local configurations
+.settings/
+.launch
+*.launch
+
+# Log files and temporary files
+*.log
