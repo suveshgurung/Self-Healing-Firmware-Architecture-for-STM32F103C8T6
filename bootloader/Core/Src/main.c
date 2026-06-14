@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
 #include "flash_layout.h"
 #include "app_header.h"
 /* USER CODE END Includes */
@@ -33,7 +34,9 @@ typedef void (*p_func)(void);
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define MAGIC_NUM_ERR		"Magic number error\r\n"
+#define RESET_HANDLER_ERR	"Reset handler error\r\n"
+#define CRC_ERR				"CRC check error\r\n"
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -42,6 +45,8 @@ typedef void (*p_func)(void);
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+CRC_HandleTypeDef hcrc;
+
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
@@ -52,9 +57,10 @@ UART_HandleTypeDef huart1;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_CRC_Init(void);
 /* USER CODE BEGIN PFP */
 void jump_to_application(void);
-int is_application_valid(void);
+int is_application_not_valid(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -92,6 +98,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+  MX_CRC_Init();
   /* USER CODE BEGIN 2 */
 //  __disable_irq();
 
@@ -108,10 +115,20 @@ int main(void)
 //  HAL_UART_Transmit(&huart1, message, sizeof(message), 1000);
 
   HAL_UART_Transmit(&huart1, (uint8_t *)"Hello from the bootloader\r\n", 27, HAL_MAX_DELAY);
-//  jump_to_application();
 
-  if (!is_application_valid()) {
-	  HAL_UART_Transmit(&huart1, (uint8_t *)"Failed to validate application\r\n", 32, HAL_MAX_DELAY);
+  int application_validation_status = is_application_not_valid();
+  if (application_validation_status != 0) {
+	  switch (application_validation_status) {
+	  case 1:
+		  HAL_UART_Transmit(&huart1, (uint8_t *)MAGIC_NUM_ERR, strlen(MAGIC_NUM_ERR), HAL_MAX_DELAY);
+		  break;
+	  case 2:
+		  HAL_UART_Transmit(&huart1, (uint8_t *)RESET_HANDLER_ERR, strlen(RESET_HANDLER_ERR), HAL_MAX_DELAY);
+		  break;
+	  case 3:
+		  HAL_UART_Transmit(&huart1, (uint8_t *)CRC_ERR, strlen(CRC_ERR), HAL_MAX_DELAY);
+		  break;
+	  }
 
 	  while(1) {
 		  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
@@ -170,6 +187,32 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief CRC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_CRC_Init(void)
+{
+
+  /* USER CODE BEGIN CRC_Init 0 */
+
+  /* USER CODE END CRC_Init 0 */
+
+  /* USER CODE BEGIN CRC_Init 1 */
+
+  /* USER CODE END CRC_Init 1 */
+  hcrc.Instance = CRC;
+  if (HAL_CRC_Init(&hcrc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN CRC_Init 2 */
+  __HAL_RCC_CRC_CLK_ENABLE();
+  /* USER CODE END CRC_Init 2 */
+
 }
 
 /**
@@ -243,6 +286,7 @@ void jump_to_application(void) {
 	uint32_t app_reset_handler_ptr = *(uint32_t *)(APP_START_ADDR + 4);
 
 	p_func app_entry = (p_func)app_reset_handler_ptr;
+//	HAL_UART_Transmit(&huart1, (uint8_t *)"Inside here\r\n", 13, HAL_MAX_DELAY);
 
 	__disable_irq();
 
@@ -255,15 +299,28 @@ void jump_to_application(void) {
 	app_entry();
 }
 
-int is_application_valid(void) {
+int is_application_not_valid(void) {
 	const app_header_t *app_header = (const app_header_t *) APP_HEADER_START_ADDR;
 	const uint32_t app_magic_number = (uint32_t) APP_MAGIC_NUMBER;
 
 	if (app_header->magic_number != app_magic_number) {
-		return 0;
+		return 1;
 	}
 
-	return 1;
+	const uint32_t reset_handler = *(uint32_t *) (APP_START_ADDR + 4);
+	if ((reset_handler & 0xFF000000) != 0x08000000) {
+		return 2;
+	}
+
+	uint32_t *application_start_addr = (uint32_t *) APP_START_ADDR;
+	uint32_t num_of_words = app_header->app_size / 4;					// number of 32-bit words. Since the pointer to memory is a 32-bit pointer.
+
+	uint32_t crc = HAL_CRC_Calculate(&hcrc, application_start_addr, num_of_words);
+	if (crc != app_header->crc) {
+		return 3;
+	}
+
+	return 0;
 }
 /* USER CODE END 4 */
 

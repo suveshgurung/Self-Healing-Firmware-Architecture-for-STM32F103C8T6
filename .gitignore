@@ -23,3 +23,5 @@
 
 # Log files and temporary files
 *.log
+
+__pycache__

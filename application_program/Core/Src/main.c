@@ -63,8 +63,8 @@ const uint32_t app_magic_number = (uint32_t) APP_MAGIC_NUMBER;
 __attribute__((section(".header")))
 app_header_t app_header = {
 		.magic_number = app_magic_number,
-		.app_size = 0,
-		.crc = 0
+		.app_size = 8740,
+		.crc = 0x90C8290E
 };
 /* USER CODE END 0 */
 
