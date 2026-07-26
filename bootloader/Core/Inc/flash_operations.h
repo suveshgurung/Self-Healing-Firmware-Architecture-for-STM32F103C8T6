@@ -16,6 +16,8 @@
 
 void flash_unlock(void);
 void flash_erase(uint32_t start_address);
-void flash_program(void);
+void flash_program(uint32_t address, uint16_t data);
+void erase_application_pages(void);
+void write_application_into_flash(void);
 
 #endif /* INC_FLASH_OPERATIONS_H_ */
