@@ -131,27 +131,13 @@ int main(void)
 		  HAL_UART_Transmit(&huart1, (uint8_t *)CRC_ERR, strlen(CRC_ERR), HAL_MAX_DELAY);
 
 		  /* First, erase the application memory */
-		  const app_header_t *app_header = (const app_header_t *) APP_HEADER_START_ADDR;
-		  uint32_t app_size = app_header->app_size;
-		  uint8_t number_of_pages = (uint8_t)ceil(app_size / 1024.0);
-		  for (uint8_t i = 0; i < number_of_pages; i++) {
-			  flash_erase(APP_START_ADDR + (i * 1024));
-		  }
+		  erase_application_pages();
 
-		  /* Check every erased address */
-		  char message[100];
-		  uint32_t *application_start_addr = (uint32_t *) APP_START_ADDR;
-		  uint32_t number_of_words = ceil(app_size / 4.0);
-		  do {
-			  uint32_t value_at_address = *(application_start_addr + number_of_words);
-			  if (value_at_address != 0xFFFFFFFF) {
-				  sprintf(message, "Error erasing application memory: %p\r\n", (application_start_addr + number_of_words));
-				  HAL_UART_Transmit(&huart1, (uint8_t *)message, strlen(message), HAL_MAX_DELAY);
-			  }
-			  number_of_words--;
-		  }	while(number_of_words != 0);
-		  sprintf(message, "Application memory erased successfully!!!\r\n");
-		  HAL_UART_Transmit(&huart1, (uint8_t *)message, strlen(message), HAL_MAX_DELAY);
+		  /* Write the Active Slot with the Backup Image */
+		  write_application_into_flash();
+
+		  /* Perform a software system reset */
+		  NVIC_SystemReset();
 
 		  break;
 	  }
@@ -339,9 +325,9 @@ int is_application_not_valid(void) {
 	}
 
 	uint32_t *application_start_addr = (uint32_t *) APP_START_ADDR;
-	uint32_t num_of_words = ceil(app_header->app_size / 4.0);					// number of 32-bit words. Since the pointer to memory is a 32-bit pointer.
+	uint32_t number_of_words = ceil(app_header->app_size / 4.0);					// number of 32-bit words. Since the pointer to memory is a 32-bit pointer.
 
-	uint32_t crc = HAL_CRC_Calculate(&hcrc, application_start_addr, num_of_words);
+	uint32_t crc = HAL_CRC_Calculate(&hcrc, application_start_addr, number_of_words);
 	if (crc != app_header->crc) {
 		return 3;
 	}
