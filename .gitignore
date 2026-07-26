@@ -4,6 +4,7 @@
 *.o
 *.su
 *.d
+*.cyclo
 
 # Build output directories (Default configurations)
 /Debug/

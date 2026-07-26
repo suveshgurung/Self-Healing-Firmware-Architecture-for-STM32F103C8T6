@@ -46,7 +46,7 @@ MEMORY
 {
   RAM        (xrw)   : ORIGIN = 0x20000000,   LENGTH = 20K
   APP_HEADER (rx)	 : ORIGIN = 0x8004000,	  LENGTH = 1K
-  FLASH      (rx)    : ORIGIN = 0x8004400,    LENGTH = 47K
+  FLASH      (rx)    : ORIGIN = 0x8004400,    LENGTH = 55K + 512
 }
 
 /* Sections */
